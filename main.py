@@ -128,7 +128,7 @@ def search_keywords(text, keywords, G, trie):
 
     return results, keyword_count, page_order
 
-def display_results(results, keyword_count, page_order, G, keywords, text):
+def display_results(results, keyword_count, page_order, G, keywords, text, results_per_page=20):
     total_ranks = {}
     for page_num in results:
         in_edges = G.in_edges(page_num, data=True)
@@ -139,39 +139,50 @@ def display_results(results, keyword_count, page_order, G, keywords, text):
                                        for source, _, data in in_edges for keyword in keywords if re.search(keyword, text[source - 1], re.IGNORECASE))
         total_ranks[page_num] = keyword_count_on_page + num_keywords * 5 + link_bonus + referring_keywords_bonus
 
-    ranked_results = sorted(results.items(), key=lambda x: total_ranks[x[0]], reverse=True)
+    ranked_results = sorted(total_ranks.items(), key=lambda x: x[1], reverse=True)
+    total_pages = len(ranked_results)
+    current_page = 0
 
-    for page_num, matches in ranked_results:
-        search_result = page_order.index(page_num) + 1
-        in_edges = G.in_edges(page_num, data=True) # Refresh in_edges for each page
+    while True:
+        start_index = current_page * results_per_page
+        end_index = start_index + results_per_page
+        for page_num, _ in ranked_results[start_index:end_index]:
+            search_result = page_order.index(page_num) + 1
+            in_edges = G.in_edges(page_num, data=True)
 
-        # Recalculate values for the current page
-        keyword_count_on_page = sum(len(re.findall(keyword, text[page_num - 1], re.IGNORECASE)) for keyword in keywords)
-        num_keywords = sum(1 for keyword in keywords if re.search(keyword, text[page_num - 1], re.IGNORECASE))
-        link_bonus = sum(data['weight'] * 10 for _, _, data in in_edges)
-        referring_keywords_bonus = sum(len(re.findall(keyword, text[source - 1], re.IGNORECASE)) * 7
-                                       for source, _, data in in_edges for keyword in keywords if re.search(keyword, text[source - 1], re.IGNORECASE))
+            # Reinitialize values for each page displayed
+            keyword_count_on_page = sum(len(re.findall(keyword, text[page_num - 1], re.IGNORECASE)) for keyword in keywords)
+            num_keywords = sum(1 for keyword in keywords if re.search(keyword, text[page_num - 1], re.IGNORECASE))
+            link_bonus = sum(data['weight'] * 10 for _, _, data in in_edges)
+            referring_keywords_bonus = sum(len(re.findall(keyword, text[source - 1], re.IGNORECASE)) * 7
+                                           for source, _, data in in_edges for keyword in keywords if re.search(keyword, text[source - 1], re.IGNORECASE))
 
-        print(f"Search Result: {search_result}, Page: {page_num}, Rank: {total_ranks[page_num]}")
-        for line_num, context in matches:
-            print(f"{line_num}. {context}")
+            print(f"\nSearch Result: {search_result}, Page: {page_num}, Rank: {total_ranks[page_num]}")
+            matches = results.get(page_num, [])  # Ensure to get matches or an empty list if no matches
+            for line_num, context in matches:
+                print(f"{line_num}. {context}")
+            if in_edges:
+                link_info = ', '.join(f"Page {source} ({data['weight']} times)" for source, _, data in in_edges)
+                print(f"Linked from pages: {link_info}")
+                keyword_details = {source: sum(len(re.findall(keyword, text[source - 1], re.IGNORECASE)) for keyword in keywords) for source, _, _ in in_edges}
+                for source, count in keyword_details.items():
+                    print(f"Keywords on Page {source}: {count} times")
 
-        if in_edges:
-            link_info = ', '.join(f"Page {source} ({data['weight']} times)" for source, _, data in in_edges)
-            print(f"Linked from pages: {link_info}")
-            # Update keyword details count
-            keyword_details = defaultdict(int)
-            for source, _, data in in_edges:
-                for keyword in keywords:
-                    keyword_count = len(re.findall(keyword, text[source - 1], re.IGNORECASE))
-                    keyword_details[source] += keyword_count
-            for source, count in keyword_details.items():
-                print(f"Keywords on Page {source}: {count} times")
+            print(f"Formula for rank: {keyword_count_on_page} (appearances) + {num_keywords} (distinct keywords) * 5 + {link_bonus} (links bonus) + {referring_keywords_bonus} (referring keywords bonus) = {total_ranks[page_num]}")
 
-        print(
-            f"Formula for rank: {keyword_count_on_page} (appearances) + {num_keywords} (distinct keywords) * 5 + {link_bonus} (links bonus) + {referring_keywords_bonus} (referring keywords bonus) = {total_ranks[page_num]}")
-        print()
-
+        if end_index >= total_pages:
+            print("\nEnd of results.")
+            break
+        else:
+            response = input(f"\nDisplayed {end_index} of {total_pages} results. Enter 'next' for next {results_per_page} results, 'all' for all results, or 'done' to finish: ")
+            if response.lower() == 'next':
+                current_page += 1
+            elif response.lower() == 'all':
+               # Display all results
+                print("\nEnd of results.")
+                break
+            elif response.lower() == 'done':
+                break
 def search_menu():
     if os.path.exists(SERIALIZED_GRAPH_PATH) and os.path.exists(SERIALIZED_TRIE_PATH) and os.path.exists(SERIALIZED_TEXT_PATH):
         G = load_object(SERIALIZED_GRAPH_PATH)
