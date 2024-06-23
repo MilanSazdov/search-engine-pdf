@@ -142,10 +142,17 @@ def display_results(results, keyword_count, page_order, G, keywords, text, resul
     ranked_results = sorted(total_ranks.items(), key=lambda x: x[1], reverse=True)
     total_pages = len(ranked_results)
     current_page = 0
+    response = 'next'  # Default initial response to start displaying results
 
     while True:
-        start_index = current_page * results_per_page
-        end_index = start_index + results_per_page
+        if response.lower() == 'all':
+            start_index = 0
+            end_index = total_pages
+        else:
+            start_index = current_page * results_per_page
+            end_index = start_index + results_per_page
+            end_index = min(end_index, total_pages)  # Ensure we don't exceed the total results
+
         for page_num, _ in ranked_results[start_index:end_index]:
             search_result = page_order.index(page_num) + 1
             in_edges = G.in_edges(page_num, data=True)
@@ -175,14 +182,10 @@ def display_results(results, keyword_count, page_order, G, keywords, text, resul
             break
         else:
             response = input(f"\nDisplayed {end_index} of {total_pages} results. Enter 'next' for next {results_per_page} results, 'all' for all results, or 'done' to finish: ")
-            if response.lower() == 'next':
-                current_page += 1
-            elif response.lower() == 'all':
-               # Display all results
-                print("\nEnd of results.")
+            if response.lower() == 'done':
                 break
-            elif response.lower() == 'done':
-                break
+
+
 def search_menu():
     if os.path.exists(SERIALIZED_GRAPH_PATH) and os.path.exists(SERIALIZED_TRIE_PATH) and os.path.exists(SERIALIZED_TEXT_PATH):
         G = load_object(SERIALIZED_GRAPH_PATH)
