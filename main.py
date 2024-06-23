@@ -1,45 +1,62 @@
+
 from pdfminer.high_level import extract_text
 import networkx as nx
 from collections import defaultdict
 import re
 
 PDF_PATH = "C:/Users/milan/OneDrive/Desktop/SIIT/2. Semestar/Algoritmi i Strukture/Projekat 2/Data Structures and Algorithms in Python.pdf"
-OFFSET = 22  # Offset for the first 22 unnumbered pages
+OFFSET = 22  # Offset za prve 22 nenumerisane stranice
 
 class TrieNode:
     def __init__(self):
         self.children = {}
-        self.end_of_word = False  # Indicates the end of a word
+        self.is_end_of_word = False
 
-def add_word(root, word):
-    node = root
-    for char in word.lower():  # Convert to lowercase to ensure case-insensitivity
-        if char not in node.children:
-            node.children[char] = TrieNode()
-        node = node.children[char]
-    node.end_of_word = True
+class Trie:
+    def __init__(self):
+        self.root = TrieNode()
 
-def search_word(root, word):
-    # Search for any substring of 'word' starting from any node in the Trie
-    for start in range(len(word)):
-        node = root
-        for char in word[start:].lower():
+    def insert(self, word):
+        node = self.root
+        for char in word.lower():
             if char not in node.children:
-                break
+                node.children[char] = TrieNode()
             node = node.children[char]
-            if node.end_of_word:
-                return True
-    return False
+        node.is_end_of_word = True
+
+    def search(self, word):
+        node = self.root
+        for char in word.lower():
+            if char not in node.children:
+                return False
+            node = node.children[char]
+        return node.is_end_of_word
+
+    def starts_with(self, prefix):
+        node = self.root
+        for char in prefix.lower():
+            if char not in node.children:
+                return False
+            node = node.children[char]
+        return True
+
 
 def extract_text_from_pdf(pdf_path):
     text = extract_text(pdf_path)
     pages = text.split('\x0c')  # Split the text into pages
     return pages
 
+def initialize_trie(text):
+    trie = Trie()
+    for page in text:
+        words = re.findall(r'\w+', page)
+        for word in words:
+            trie.insert(word)
+    return trie
+
 def initialize_graph(text):
     G = nx.DiGraph()
     link_patterns = [
-        # Patterns to find references to other pages
         r'see page (\d+)', r'refer to page (\d+)', r'turn to page (\d+)', r'check page (\d+)', r'on page (\d+)',
         r'consult page (\d+)', r'found on page (\d+)', r'look at page (\d+)', r'continued on page (\d+)',
         r'more on page (\d+)', r'details on page (\d+)', r'see also page (\d+)', r'refer back to page (\d+)',
@@ -66,11 +83,7 @@ def initialize_graph(text):
 
     return G
 
-def escape_regex(keyword):
-    # Escapes special characters for accurate regex searches
-    return re.escape(keyword)
-
-def search_keywords(text, keywords, G):
+def search_keywords(text, keywords, G, trie):
     results = defaultdict(list)
     keyword_count = defaultdict(int)
     page_order = []
@@ -82,23 +95,24 @@ def search_keywords(text, keywords, G):
 
         for line_num, line in enumerate(lines):
             for keyword in keywords:
-                escaped_keyword = escape_regex(keyword)
-                # Pattern to match the keyword as a substring
-                pattern = f"{escaped_keyword}"
-                matches = re.finditer(pattern, line, re.IGNORECASE)
-                for match in matches:
-                    # Highlight only the part of the word that matches the keyword exactly
-                    start, end = match.span()
-                    highlighted_text = line[:start] + "\033[91m" + line[start:end] + "\033[0m" + line[end:]
-                    results[page_num + 1].append((line_num + 1, highlighted_text))
-                    keyword_count[page_num + 1] += 1
-                    found_keywords.add(keyword)
-                    if not keyword_found:
-                        page_order.append(page_num + 1)
-                        keyword_found = True
+                if trie.search(keyword):
+                    if re.search(keyword, line, re.IGNORECASE):
+                        context_highlighted = re.sub(keyword, lambda x: f"\033[91m{x.group()}\033[0m", line, flags=re.IGNORECASE)
+                        results[page_num + 1].append((line_num + 1, context_highlighted))
+                        keyword_count[page_num + 1] += len(re.findall(keyword, line, re.IGNORECASE))
+                        found_keywords.add(keyword)
+                        if not keyword_found:
+                            page_order.append(page_num + 1)
+                            keyword_found = True
 
         # Bonus points for pages containing multiple keywords
         keyword_count[page_num + 1] += len(found_keywords) * 5
+
+    # Adding points based on links to pages
+    for page in G.nodes:
+        in_edges = G.in_edges(page, data=True)
+        link_bonus = sum(data.get('weight', 1) * 10 for _, _, data in in_edges)
+        keyword_count[page] += link_bonus
 
     return results, keyword_count, page_order
 
@@ -107,11 +121,11 @@ def display_results(results, keyword_count, page_order, G, keywords, text):
     total_ranks = {}
     for page_num in results:
         in_edges = G.in_edges(page_num, data=True)
-        keyword_count_on_page = sum(len(re.findall(escape_regex(keyword), text[page_num - 1], re.IGNORECASE)) for keyword in keywords)
-        num_keywords = sum(1 for keyword in keywords if re.search(escape_regex(keyword), text[page_num - 1], re.IGNORECASE))
+        keyword_count_on_page = sum(len(re.findall(keyword, text[page_num - 1], re.IGNORECASE)) for keyword in keywords)
+        num_keywords = sum(1 for keyword in keywords if re.search(keyword, text[page_num - 1], re.IGNORECASE))
         link_bonus = sum(data['weight'] * 10 for _, _, data in in_edges)
-        referring_keywords_bonus = sum(len(re.findall(escape_regex(keyword), text[source - 1], re.IGNORECASE)) * 7
-                                       for source, _, data in in_edges for keyword in keywords if re.search(escape_regex(keyword), text[source - 1], re.IGNORECASE))
+        referring_keywords_bonus = sum(len(re.findall(keyword, text[source - 1], re.IGNORECASE)) * 7
+                                       for source, _, data in in_edges for keyword in keywords if re.search(keyword, text[source - 1], re.IGNORECASE))
         total_ranks[page_num] = keyword_count_on_page + num_keywords * 5 + link_bonus + referring_keywords_bonus
 
     ranked_results = sorted(results.items(), key=lambda x: total_ranks[x[0]], reverse=True)
@@ -121,11 +135,11 @@ def display_results(results, keyword_count, page_order, G, keywords, text):
         in_edges = G.in_edges(page_num, data=True) # Refresh in_edges for each page
 
         # Recalculate values for the current page
-        keyword_count_on_page = sum(len(re.findall(escape_regex(keyword), text[page_num - 1], re.IGNORECASE)) for keyword in keywords)
-        num_keywords = sum(1 for keyword in keywords if re.search(escape_regex(keyword), text[page_num - 1], re.IGNORECASE))
+        keyword_count_on_page = sum(len(re.findall(keyword, text[page_num - 1], re.IGNORECASE)) for keyword in keywords)
+        num_keywords = sum(1 for keyword in keywords if re.search(keyword, text[page_num - 1], re.IGNORECASE))
         link_bonus = sum(data['weight'] * 10 for _, _, data in in_edges)
-        referring_keywords_bonus = sum(len(re.findall(escape_regex(keyword), text[source - 1], re.IGNORECASE)) * 7
-                                       for source, _, data in in_edges for keyword in keywords if re.search(escape_regex(keyword), text[source - 1], re.IGNORECASE))
+        referring_keywords_bonus = sum(len(re.findall(keyword, text[source - 1], re.IGNORECASE)) * 7
+                                       for source, _, data in in_edges for keyword in keywords if re.search(keyword, text[source - 1], re.IGNORECASE))
 
         print(f"Search Result: {search_result}, Page: {page_num}, Rank: {total_ranks[page_num]}")
         for line_num, context in matches:
@@ -136,6 +150,10 @@ def display_results(results, keyword_count, page_order, G, keywords, text):
             print(f"Linked from pages: {link_info}")
             # Update keyword details count
             keyword_details = defaultdict(int)
+            for source, _, data in in_edges:
+                for keyword in keywords:
+                    keyword_count = len(re.findall(keyword, text[source - 1], re.IGNORECASE))
+                    keyword_details[source] += keyword_count
             for source, count in keyword_details.items():
                 print(f"Keywords on Page {source}: {count} times")
 
@@ -143,15 +161,17 @@ def display_results(results, keyword_count, page_order, G, keywords, text):
             f"Formula for rank: {keyword_count_on_page} (appearances) + {num_keywords} (distinct keywords) * 5 + {link_bonus} (links bonus) + {referring_keywords_bonus} (referring keywords bonus) = {total_ranks[page_num]}")
         print()
 
+
 def search_menu():
     text = extract_text_from_pdf(PDF_PATH)
     G = initialize_graph(text)
+    trie = initialize_trie(text)
     while True:
         query = input("Enter search query (or 'exit' to quit): ")
         if query.lower() == 'exit':
             break
         keywords = query.split()
-        results, keyword_count, page_order = search_keywords(text, keywords, G)
+        results, keyword_count, page_order = search_keywords(text, keywords, G, trie)
         display_results(results, keyword_count, page_order, G, keywords, text)
 
 if __name__ == "__main__":
