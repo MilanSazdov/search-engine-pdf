@@ -40,7 +40,40 @@ def initialize_graph(text):
 
     return G
 
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.end_of_word = False  # Indicates the end of a word
+
+def add_word(root, word):
+    node = root
+    for char in word.lower():  # Convert to lowercase to ensure case-insensitivity
+        if char not in node.children:
+            node.children[char] = TrieNode()
+        node = node.children[char]
+    node.end_of_word = True
+
+def search_word(root, word):
+    # Search for any substring of 'word' starting from any node in the Trie
+    for start in range(len(word)):
+        node = root
+        for char in word[start:].lower():
+            if char not in node.children:
+                break
+            node = node.children[char]
+            if node.end_of_word:
+                return True
+    return False
+
+
+def initialize_trie(keywords):
+    root = TrieNode()
+    for keyword in keywords:
+        add_word(root, keyword)
+    return root
+
 def search_keywords(text, keywords, G):
+    trie_root = initialize_trie(keywords)
     results = defaultdict(list)
     keyword_count = defaultdict(int)
     page_order = []
@@ -51,12 +84,13 @@ def search_keywords(text, keywords, G):
         found_keywords = set()
 
         for line_num, line in enumerate(lines):
-            for keyword in keywords:
-                if re.search(keyword, line, re.IGNORECASE):
-                    context_highlighted = re.sub(keyword, lambda x: f"\033[91m{x.group()}\033[0m", line, flags=re.IGNORECASE)
+            words = line.split()
+            for word in words:
+                if search_word(trie_root, word):
+                    found_keywords.add(word)
+                    context_highlighted = re.sub(word, lambda x: f"\033[91m{x.group()}\033[0m", line, flags=re.IGNORECASE)
                     results[page_num + 1].append((line_num + 1, context_highlighted))
-                    keyword_count[page_num + 1] += len(re.findall(keyword, line, re.IGNORECASE))
-                    found_keywords.add(keyword)
+                    keyword_count[page_num + 1] += 1
                     if not keyword_found:
                         page_order.append(page_num + 1)
                         keyword_found = True
