@@ -1,11 +1,16 @@
-
+import pickle
 from pdfminer.high_level import extract_text
 import networkx as nx
 from collections import defaultdict
 import re
+import os
 
 PDF_PATH = "C:/Users/milan/OneDrive/Desktop/SIIT/2. Semestar/Algoritmi i Strukture/Projekat 2/Data Structures and Algorithms in Python.pdf"
 OFFSET = 22  # Offset za prve 22 nenumerisane stranice
+SERIALIZED_GRAPH_PATH = 'graph.pickle'
+SERIALIZED_TRIE_PATH = 'trie.pickle'
+SERIALIZED_TEXT_PATH = 'text.pickle'
+
 
 class TrieNode:
     def __init__(self):
@@ -40,6 +45,13 @@ class Trie:
             node = node.children[char]
         return True
 
+def save_object(obj, file_name):
+    with open(file_name, 'wb') as f:
+        pickle.dump(obj, f)
+
+def load_object(file_name):
+    with open(file_name, 'rb') as f:
+        return pickle.load(f)
 
 def extract_text_from_pdf(pdf_path):
     text = extract_text(pdf_path)
@@ -116,7 +128,6 @@ def search_keywords(text, keywords, G, trie):
 
     return results, keyword_count, page_order
 
-
 def display_results(results, keyword_count, page_order, G, keywords, text):
     total_ranks = {}
     for page_num in results:
@@ -161,11 +172,19 @@ def display_results(results, keyword_count, page_order, G, keywords, text):
             f"Formula for rank: {keyword_count_on_page} (appearances) + {num_keywords} (distinct keywords) * 5 + {link_bonus} (links bonus) + {referring_keywords_bonus} (referring keywords bonus) = {total_ranks[page_num]}")
         print()
 
-
 def search_menu():
-    text = extract_text_from_pdf(PDF_PATH)
-    G = initialize_graph(text)
-    trie = initialize_trie(text)
+    if os.path.exists(SERIALIZED_GRAPH_PATH) and os.path.exists(SERIALIZED_TRIE_PATH) and os.path.exists(SERIALIZED_TEXT_PATH):
+        G = load_object(SERIALIZED_GRAPH_PATH)
+        trie = load_object(SERIALIZED_TRIE_PATH)
+        text = load_object(SERIALIZED_TEXT_PATH)
+    else:
+        text = extract_text_from_pdf(PDF_PATH)
+        G = initialize_graph(text)
+        trie = initialize_trie(text)
+        save_object(G, SERIALIZED_GRAPH_PATH)
+        save_object(trie, SERIALIZED_TRIE_PATH)
+        save_object(text, SERIALIZED_TEXT_PATH)
+
     while True:
         query = input("Enter search query (or 'exit' to quit): ")
         if query.lower() == 'exit':
@@ -173,6 +192,7 @@ def search_menu():
         keywords = query.split()
         results, keyword_count, page_order = search_keywords(text, keywords, G, trie)
         display_results(results, keyword_count, page_order, G, keywords, text)
+
 
 if __name__ == "__main__":
     search_menu()
