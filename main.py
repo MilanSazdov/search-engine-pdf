@@ -1,17 +1,15 @@
-import PyPDF2
-import re
+from pdfminer.high_level import extract_text
 import networkx as nx
 from collections import defaultdict
-from termcolor import colored
+import re
 
 PDF_PATH = "C:/Users/milan/OneDrive/Desktop/SIIT/2. Semestar/Algoritmi i Strukture/Projekat 2/Data Structures and Algorithms in Python.pdf"
 OFFSET = 22  # Offset za prve 22 nenumerisane stranice
 
 def extract_text_from_pdf(pdf_path):
-    with open(pdf_path, "rb") as file:
-        reader = PyPDF2.PdfReader(file)
-        text = [page.extract_text() for page in reader.pages]
-    return text
+    text = extract_text(pdf_path)
+    pages = text.split('\x0c')  # Split the text into pages
+    return pages
 
 def initialize_graph(text):
     G = nx.DiGraph()
@@ -118,9 +116,6 @@ def display_results(results, keyword_count, page_order, G, keywords, text):
         print(
             f"Formula for rank: {keyword_count_on_page} (appearances) + {num_keywords} (distinct keywords) * 5 + {link_bonus} (links bonus) + {referring_keywords_bonus} (referring keywords bonus) = {total_ranks[page_num]}")
         print()
-
-
-
 
 
 def search_menu():
