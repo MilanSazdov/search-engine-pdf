@@ -4,6 +4,7 @@ import networkx as nx
 from collections import defaultdict
 import re
 import os
+from difflib import get_close_matches
 
 PDF_PATH = "C:/Users/milan/OneDrive/Desktop/SIIT/2. Semestar/Algoritmi i Strukture/Projekat 2/Data Structures and Algorithms in Python.pdf"
 OFFSET = 22  # Offset za prve 22 nenumerisane stranice
@@ -120,17 +121,18 @@ def initialize_graph(text):
 
 def parse_query(query):
     """
-    Parse the query to handle complex logical operators.
+    Parse the query to handle complex logical operators and phrases.
     """
     query = query.lower()
     tokens = re.split(r'(\band\b|\bor\b|\bnot\b)', query)
-    tokens = [token.strip() for token in tokens if token.strip()]
     parsed_query = []
     for token in tokens:
         if token in ('and', 'or', 'not'):
             parsed_query.append(token.upper())
         else:
-            parsed_query.append(token.split())
+            phrases = re.findall(r'"([^"]+)"', token)
+            words = re.findall(r'\b\w+\b', re.sub(r'"[^"]+"', '', token))
+            parsed_query.append(phrases + words)
     return parsed_query
 
 
@@ -140,11 +142,11 @@ def evaluate_query(parsed_query, trie, text):
     current_result_set = set()
 
     for token in parsed_query:
-        if isinstance(token, list):  # This is a list of keywords
+        if isinstance(token, list):  # This is a list of keywords/phrases
             temp_result_set = set()
             for page_num, page in enumerate(text):
                 for keyword in token:
-                    if trie.search(keyword) and re.search(keyword, page, re.IGNORECASE):
+                    if keyword in page.lower():
                         temp_result_set.add(page_num + 1)
             if current_operator == 'AND':
                 current_result_set &= temp_result_set
@@ -169,9 +171,9 @@ def search_keywords(text, parsed_query, G, trie):
         lines = text[page_num - 1].split('\n')
         for line_num, line in enumerate(lines):
             for token in parsed_query:
-                if isinstance(token, list):  # This is a list of keywords
+                if isinstance(token, list):  # This is a list of keywords/phrases
                     for keyword in token:
-                        if trie.search(keyword) and re.search(keyword, line, re.IGNORECASE):
+                        if keyword in line.lower():
                             context_highlighted = re.sub(keyword, lambda x: f"\033[91m{x.group()}\033[0m", line,
                                                          flags=re.IGNORECASE)
                             results[page_num].append((line_num + 1, context_highlighted))
@@ -209,7 +211,13 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
                                        re.search(keyword, text[source - 1], re.IGNORECASE))
         total_ranks[page_num] = keyword_count_on_page + num_keywords * 5 + link_bonus + referring_keywords_bonus
 
+    # Create a list of (page_num, rank) and sort by page number to assign search result indices
+    sorted_by_page_number = sorted(total_ranks.items())
+    search_result_indices = {page_num: index + 1 for index, (page_num, _) in enumerate(sorted_by_page_number)}
+
+    # Sort by rank in descending order for display
     ranked_results = sorted(total_ranks.items(), key=lambda x: x[1], reverse=True)
+
     total_pages = len(ranked_results)
     current_page = 0
 
@@ -218,8 +226,7 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
         end_index = start_index + results_per_page
         end_index = min(end_index, total_pages)  # Ensure we don't exceed the total results
 
-        for page_num, _ in ranked_results[start_index:end_index]:
-            search_result = page_order.index(page_num) + 1
+        for page_index, (page_num, _) in enumerate(ranked_results[start_index:end_index], start=start_index + 1):
             in_edges = G.in_edges(page_num, data=True)
 
             # Reinitialize values for each page displayed
@@ -233,6 +240,8 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
                                            for source, _, data in in_edges for token in parsed_query if
                                            isinstance(token, list) for keyword in token if
                                            re.search(keyword, text[source - 1], re.IGNORECASE))
+
+            search_result = search_result_indices[page_num]  # Get the search result index based on page number
 
             print(f"\nSearch Result: {search_result}, Page: {page_num}, Rank: {total_ranks[page_num]}")
             matches = results.get(page_num, [])  # Ensure to get matches or an empty list if no matches
@@ -264,6 +273,23 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
             elif response.lower() == 'done':
                 break
 
+def find_similar_words(word, word_list, n=1, cutoff=0.8):
+    """
+    Find similar words from the word list using difflib.
+    """
+    return get_close_matches(word, word_list, n=n, cutoff=cutoff)
+
+
+def get_all_words(text):
+    """
+    Extract all unique words from the text for similarity comparison.
+    """
+    words = set()
+    for page in text:
+        page_words = re.findall(r'\w+', page)
+        words.update(page_words)
+    return words
+
 
 def search_menu():
     if os.path.exists(SERIALIZED_GRAPH_PATH) and os.path.exists(SERIALIZED_TRIE_PATH) and os.path.exists(
@@ -279,25 +305,55 @@ def search_menu():
         save_object(trie, SERIALIZED_TRIE_PATH)
         save_object(text, SERIALIZED_TEXT_PATH)
 
+    all_words = get_all_words(text)
+
     while True:
         query = input("Enter search query (or 'exit' to quit): ")
         if query.lower() == 'exit':
             break
 
-        # Autocomplete logic
-        autocomplete_options = trie.autocomplete(query)
-        if autocomplete_options:
-            print("Autocomplete options:")
-            for option in autocomplete_options:
-                print(option)
-            autocomplete_choice = input("Choose an option or continue typing your query: ")
-            if autocomplete_choice:
-                query = autocomplete_choice
+        # Check for logical operators in the query
+        has_logical_operators = any(op in query.lower() for op in ['and', 'or', 'not'])
+
+        # Autocomplete logic (only if no logical operators are present)
+        if not has_logical_operators and query.endswith('*'):
+            autocomplete_options = trie.autocomplete(query.rstrip('*'))
+            if autocomplete_options:
+                print("Autocomplete options:")
+                for option in autocomplete_options:
+                    print(option)
+                autocomplete_choice = input("Choose an option or continue typing your query: ")
+                if autocomplete_choice:
+                    query = autocomplete_choice
 
         parsed_query = parse_query(query)
         results, keyword_count, page_order = search_keywords(text, parsed_query, G, trie)
-        display_results(results, keyword_count, page_order, G, parsed_query, text)
+
+        if not results and not has_logical_operators:  # If no results and no logical operators, suggest similar words
+            similar_words = []
+            for token in parsed_query:
+                if isinstance(token, list):
+                    for word in token:
+                        similar_word = find_similar_words(word, all_words)
+                        if similar_word:
+                            similar_words.extend(similar_word)
+
+            if similar_words:
+                print("Did you mean:")
+                for suggestion in similar_words:
+                    print(suggestion)
+                continue_choice = input("Would you like to search for one of these suggestions? (yes/no): ")
+                if continue_choice.lower() == 'yes':
+                    new_query = input("Enter the new search query: ")
+                    parsed_query = parse_query(new_query)
+                    results, keyword_count, page_order = search_keywords(text, parsed_query, G, trie)
+
+        if results:
+            display_results(results, keyword_count, page_order, G, parsed_query, text)
+        else:
+            print("No results found.")
 
 
 if __name__ == "__main__":
     search_menu()
+
