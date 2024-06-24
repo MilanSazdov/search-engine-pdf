@@ -120,18 +120,17 @@ def initialize_graph(text):
 
 def parse_query(query):
     """
-    Parse the query to handle complex logical operators and phrases.
+    Parse the query to handle complex logical operators.
     """
     query = query.lower()
     tokens = re.split(r'(\band\b|\bor\b|\bnot\b)', query)
+    tokens = [token.strip() for token in tokens if token.strip()]
     parsed_query = []
     for token in tokens:
         if token in ('and', 'or', 'not'):
             parsed_query.append(token.upper())
         else:
-            phrases = re.findall(r'"([^"]+)"', token)
-            words = re.findall(r'\b\w+\b', re.sub(r'"[^"]+"', '', token))
-            parsed_query.append(phrases + words)
+            parsed_query.append(token.split())
     return parsed_query
 
 
@@ -141,11 +140,11 @@ def evaluate_query(parsed_query, trie, text):
     current_result_set = set()
 
     for token in parsed_query:
-        if isinstance(token, list):  # This is a list of keywords/phrases
+        if isinstance(token, list):  # This is a list of keywords
             temp_result_set = set()
             for page_num, page in enumerate(text):
                 for keyword in token:
-                    if keyword in page.lower():
+                    if trie.search(keyword) and re.search(keyword, page, re.IGNORECASE):
                         temp_result_set.add(page_num + 1)
             if current_operator == 'AND':
                 current_result_set &= temp_result_set
@@ -170,9 +169,9 @@ def search_keywords(text, parsed_query, G, trie):
         lines = text[page_num - 1].split('\n')
         for line_num, line in enumerate(lines):
             for token in parsed_query:
-                if isinstance(token, list):  # This is a list of keywords/phrases
+                if isinstance(token, list):  # This is a list of keywords
                     for keyword in token:
-                        if keyword in line.lower():
+                        if trie.search(keyword) and re.search(keyword, line, re.IGNORECASE):
                             context_highlighted = re.sub(keyword, lambda x: f"\033[91m{x.group()}\033[0m", line,
                                                          flags=re.IGNORECASE)
                             results[page_num].append((line_num + 1, context_highlighted))
