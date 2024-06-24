@@ -17,6 +17,7 @@ class TrieNode:
         self.children = {}
         self.is_end_of_word = False
 
+
 class Trie:
     def __init__(self):
         self.root = TrieNode()
@@ -45,18 +46,38 @@ class Trie:
             node = node.children[char]
         return True
 
+    def autocomplete(self, prefix):
+        def dfs(node, prefix, results):
+            if node.is_end_of_word:
+                results.append(prefix)
+            for char, child_node in node.children.items():
+                dfs(child_node, prefix + char, results)
+
+        results = []
+        node = self.root
+        for char in prefix.lower():
+            if char not in node.children:
+                return results
+            node = node.children[char]
+        dfs(node, prefix, results)
+        return results
+
+
 def save_object(obj, file_name):
     with open(file_name, 'wb') as f:
         pickle.dump(obj, f)
+
 
 def load_object(file_name):
     with open(file_name, 'rb') as f:
         return pickle.load(f)
 
+
 def extract_text_from_pdf(pdf_path):
     text = extract_text(pdf_path)
     pages = text.split('\x0c')  # Split the text into pages
     return pages
+
 
 def initialize_trie(text):
     trie = Trie()
@@ -65,6 +86,7 @@ def initialize_trie(text):
         for word in words:
             trie.insert(word)
     return trie
+
 
 def initialize_graph(text):
     G = nx.DiGraph()
@@ -95,6 +117,7 @@ def initialize_graph(text):
 
     return G
 
+
 def parse_query(query):
     """
     Parse the query to handle complex logical operators.
@@ -110,6 +133,7 @@ def parse_query(query):
             parsed_query.append(token.split())
     return parsed_query
 
+
 def evaluate_query(parsed_query, trie, text):
     results = defaultdict(set)
     current_operator = 'OR'
@@ -123,15 +147,16 @@ def evaluate_query(parsed_query, trie, text):
                     if trie.search(keyword) and re.search(keyword, page, re.IGNORECASE):
                         temp_result_set.add(page_num + 1)
             if current_operator == 'AND':
-                current_result_set = current_result_set & temp_result_set if current_result_set else temp_result_set
+                current_result_set &= temp_result_set
             elif current_operator == 'OR':
-                current_result_set = current_result_set | temp_result_set if current_result_set else temp_result_set
+                current_result_set |= temp_result_set
             elif current_operator == 'NOT':
-                current_result_set = current_result_set - temp_result_set if current_result_set else set(range(1, len(text) + 1)) - temp_result_set
+                current_result_set -= temp_result_set
         else:  # This is an operator
             current_operator = token
 
     return current_result_set
+
 
 def search_keywords(text, parsed_query, G, trie):
     results = defaultdict(list)
@@ -147,7 +172,8 @@ def search_keywords(text, parsed_query, G, trie):
                 if isinstance(token, list):  # This is a list of keywords
                     for keyword in token:
                         if trie.search(keyword) and re.search(keyword, line, re.IGNORECASE):
-                            context_highlighted = re.sub(keyword, lambda x: f"\033[91m{x.group()}\033[0m", line, flags=re.IGNORECASE)
+                            context_highlighted = re.sub(keyword, lambda x: f"\033[91m{x.group()}\033[0m", line,
+                                                         flags=re.IGNORECASE)
                             results[page_num].append((line_num + 1, context_highlighted))
                             keyword_count[page_num] += len(re.findall(keyword, line, re.IGNORECASE))
                             if page_num not in page_order:
@@ -155,7 +181,8 @@ def search_keywords(text, parsed_query, G, trie):
                             break
 
         # Bonus points for pages containing multiple keywords
-        keyword_count[page_num] += len(set([keyword for token in parsed_query if isinstance(token, list) for keyword in token])) * 5
+        keyword_count[page_num] += len(
+            set([keyword for token in parsed_query if isinstance(token, list) for keyword in token])) * 5
 
     # Adding points based on links to pages
     for page in G.nodes:
@@ -165,15 +192,21 @@ def search_keywords(text, parsed_query, G, trie):
 
     return results, keyword_count, page_order
 
+
 def display_results(results, keyword_count, page_order, G, parsed_query, text, results_per_page=20):
     total_ranks = {}
     for page_num in results:
         in_edges = G.in_edges(page_num, data=True)
-        keyword_count_on_page = sum(len(re.findall(keyword, text[page_num - 1], re.IGNORECASE)) for token in parsed_query if isinstance(token, list) for keyword in token)
-        num_keywords = sum(1 for token in parsed_query if isinstance(token, list) for keyword in token if re.search(keyword, text[page_num - 1], re.IGNORECASE))
+        keyword_count_on_page = sum(
+            len(re.findall(keyword, text[page_num - 1], re.IGNORECASE)) for token in parsed_query if
+            isinstance(token, list) for keyword in token)
+        num_keywords = sum(1 for token in parsed_query if isinstance(token, list) for keyword in token if
+                           re.search(keyword, text[page_num - 1], re.IGNORECASE))
         link_bonus = sum(data['weight'] * 10 for _, _, data in in_edges)
         referring_keywords_bonus = sum(len(re.findall(keyword, text[source - 1], re.IGNORECASE)) * 7
-                                       for source, _, data in in_edges for token in parsed_query if isinstance(token, list) for keyword in token if re.search(keyword, text[source - 1], re.IGNORECASE))
+                                       for source, _, data in in_edges for token in parsed_query if
+                                       isinstance(token, list) for keyword in token if
+                                       re.search(keyword, text[source - 1], re.IGNORECASE))
         total_ranks[page_num] = keyword_count_on_page + num_keywords * 5 + link_bonus + referring_keywords_bonus
 
     ranked_results = sorted(total_ranks.items(), key=lambda x: x[1], reverse=True)
@@ -190,11 +223,16 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
             in_edges = G.in_edges(page_num, data=True)
 
             # Reinitialize values for each page displayed
-            keyword_count_on_page = sum(len(re.findall(keyword, text[page_num - 1], re.IGNORECASE)) for token in parsed_query if isinstance(token, list) for keyword in token)
-            num_keywords = sum(1 for token in parsed_query if isinstance(token, list) for keyword in token if re.search(keyword, text[page_num - 1], re.IGNORECASE))
+            keyword_count_on_page = sum(
+                len(re.findall(keyword, text[page_num - 1], re.IGNORECASE)) for token in parsed_query if
+                isinstance(token, list) for keyword in token)
+            num_keywords = sum(1 for token in parsed_query if isinstance(token, list) for keyword in token if
+                               re.search(keyword, text[page_num - 1], re.IGNORECASE))
             link_bonus = sum(data['weight'] * 10 for _, _, data in in_edges)
             referring_keywords_bonus = sum(len(re.findall(keyword, text[source - 1], re.IGNORECASE)) * 7
-                                           for source, _, data in in_edges for token in parsed_query if isinstance(token, list) for keyword in token if re.search(keyword, text[source - 1], re.IGNORECASE))
+                                           for source, _, data in in_edges for token in parsed_query if
+                                           isinstance(token, list) for keyword in token if
+                                           re.search(keyword, text[source - 1], re.IGNORECASE))
 
             print(f"\nSearch Result: {search_result}, Page: {page_num}, Rank: {total_ranks[page_num]}")
             matches = results.get(page_num, [])  # Ensure to get matches or an empty list if no matches
@@ -203,17 +241,21 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
             if in_edges:
                 link_info = ', '.join(f"Page {source} ({data['weight']} times)" for source, _, data in in_edges)
                 print(f"Linked from pages: {link_info}")
-                keyword_details = {source: sum(len(re.findall(keyword, text[source - 1], re.IGNORECASE)) for token in parsed_query if isinstance(token, list) for keyword in token) for source, _, _ in in_edges}
+                keyword_details = {source: sum(
+                    len(re.findall(keyword, text[source - 1], re.IGNORECASE)) for token in parsed_query if
+                    isinstance(token, list) for keyword in token) for source, _, _ in in_edges}
                 for source, count in keyword_details.items():
                     print(f"Keywords on Page {source}: {count} times")
 
-            print(f"Formula for rank: {keyword_count_on_page} (appearances) + {num_keywords} (distinct keywords) * 5 + {link_bonus} (links bonus) + {referring_keywords_bonus} (referring keywords bonus) = {total_ranks[page_num]}")
+            print(
+                f"Formula for rank: {keyword_count_on_page} (appearances) + {num_keywords} (distinct keywords) * 5 + {link_bonus} (links bonus) + {referring_keywords_bonus} (referring keywords bonus) = {total_ranks[page_num]}")
 
         if end_index >= total_pages:
             print("\nEnd of results.")
             break
         else:
-            response = input(f"\nDisplayed {end_index} of {total_pages} results. Enter 'next' for next {results_per_page} results, 'all' for all results, or 'done' to finish: ")
+            response = input(
+                f"\nDisplayed {end_index} of {total_pages} results. Enter 'next' for next {results_per_page} results, 'all' for all results, or 'done' to finish: ")
             if response.lower() == 'next':
                 current_page += 1
             elif response.lower() == 'all':
@@ -222,8 +264,10 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
             elif response.lower() == 'done':
                 break
 
+
 def search_menu():
-    if os.path.exists(SERIALIZED_GRAPH_PATH) and os.path.exists(SERIALIZED_TRIE_PATH) and os.path.exists(SERIALIZED_TEXT_PATH):
+    if os.path.exists(SERIALIZED_GRAPH_PATH) and os.path.exists(SERIALIZED_TRIE_PATH) and os.path.exists(
+            SERIALIZED_TEXT_PATH):
         G = load_object(SERIALIZED_GRAPH_PATH)
         trie = load_object(SERIALIZED_TRIE_PATH)
         text = load_object(SERIALIZED_TEXT_PATH)
@@ -239,9 +283,21 @@ def search_menu():
         query = input("Enter search query (or 'exit' to quit): ")
         if query.lower() == 'exit':
             break
+
+        # Autocomplete logic
+        autocomplete_options = trie.autocomplete(query)
+        if autocomplete_options:
+            print("Autocomplete options:")
+            for option in autocomplete_options:
+                print(option)
+            autocomplete_choice = input("Choose an option or continue typing your query: ")
+            if autocomplete_choice:
+                query = autocomplete_choice
+
         parsed_query = parse_query(query)
         results, keyword_count, page_order = search_keywords(text, parsed_query, G, trie)
         display_results(results, keyword_count, page_order, G, parsed_query, text)
+
 
 if __name__ == "__main__":
     search_menu()
