@@ -6,13 +6,13 @@ import re
 import os
 from difflib import get_close_matches
 from PyPDF2 import PdfReader, PdfWriter
+import datetime
 
 PDF_PATH = "C:/Users/milan/OneDrive/Desktop/SIIT/2. Semestar/Algoritmi i Strukture/Projekat 2/Data Structures and Algorithms in Python.pdf"
 OFFSET = 22  # Offset za prve 22 nenumerisane stranice
 SERIALIZED_GRAPH_PATH = 'graph.pickle'
 SERIALIZED_TRIE_PATH = 'trie.pickle'
 SERIALIZED_TEXT_PATH = 'text.pickle'
-RESULT_PDF_PATH = 'search_results.pdf'
 
 class TrieNode:
     def __init__(self):
@@ -222,7 +222,8 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
     total_pages = len(ranked_results)
     current_page = 0
 
-    save_pdf_pages([page_num for page_num, _ in ranked_results[:10]])
+    # Save top 10 pages for the current query
+    save_pdf_pages([page_num for page_num, _ in ranked_results[:10]], parsed_query)
 
     while True:
         start_index = current_page * results_per_page
@@ -295,16 +296,20 @@ def get_all_words(text):
     return words
 
 
-def save_pdf_pages(page_numbers):
+def save_pdf_pages(page_numbers, parsed_query):
     input_pdf = PdfReader(PDF_PATH)
     output_pdf = PdfWriter()
 
     for page_num in page_numbers:
         output_pdf.add_page(input_pdf.pages[page_num - 1])
 
-    with open(RESULT_PDF_PATH, 'wb') as output_pdf_file:
+    query_str = '_'.join(['_'.join(token) if isinstance(token, list) else token for token in parsed_query])
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    result_pdf_path = f"search_results_{query_str}_{timestamp}.pdf"
+
+    with open(result_pdf_path, 'wb') as output_pdf_file:
         output_pdf.write(output_pdf_file)
-    print(f"Search results saved to {RESULT_PDF_PATH}")
+    print(f"Search results saved to {result_pdf_path}")
 
 
 def search_menu():
