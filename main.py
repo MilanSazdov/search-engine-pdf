@@ -5,13 +5,14 @@ from collections import defaultdict
 import re
 import os
 from difflib import get_close_matches
+from PyPDF2 import PdfReader, PdfWriter
 
 PDF_PATH = "C:/Users/milan/OneDrive/Desktop/SIIT/2. Semestar/Algoritmi i Strukture/Projekat 2/Data Structures and Algorithms in Python.pdf"
 OFFSET = 22  # Offset za prve 22 nenumerisane stranice
 SERIALIZED_GRAPH_PATH = 'graph.pickle'
 SERIALIZED_TRIE_PATH = 'trie.pickle'
 SERIALIZED_TEXT_PATH = 'text.pickle'
-
+RESULT_PDF_PATH = 'search_results.pdf'
 
 class TrieNode:
     def __init__(self):
@@ -211,17 +212,24 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
                                        re.search(keyword, text[source - 1], re.IGNORECASE))
         total_ranks[page_num] = keyword_count_on_page + num_keywords * 5 + link_bonus + referring_keywords_bonus
 
+    # Create a list of (page_num, rank) and sort by page number to assign search result indices
+    sorted_by_page_number = sorted(total_ranks.items())
+    search_result_indices = {page_num: index + 1 for index, (page_num, _) in enumerate(sorted_by_page_number)}
+
+    # Sort by rank in descending order for display
     ranked_results = sorted(total_ranks.items(), key=lambda x: x[1], reverse=True)
+
     total_pages = len(ranked_results)
     current_page = 0
+
+    save_pdf_pages([page_num for page_num, _ in ranked_results[:10]])
 
     while True:
         start_index = current_page * results_per_page
         end_index = start_index + results_per_page
         end_index = min(end_index, total_pages)  # Ensure we don't exceed the total results
 
-        for page_num, _ in ranked_results[start_index:end_index]:
-            search_result = page_order.index(page_num) + 1
+        for page_index, (page_num, _) in enumerate(ranked_results[start_index:end_index], start=start_index + 1):
             in_edges = G.in_edges(page_num, data=True)
 
             # Reinitialize values for each page displayed
@@ -235,6 +243,8 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
                                            for source, _, data in in_edges for token in parsed_query if
                                            isinstance(token, list) for keyword in token if
                                            re.search(keyword, text[source - 1], re.IGNORECASE))
+
+            search_result = search_result_indices[page_num]  # Get the search result index based on page number
 
             print(f"\nSearch Result: {search_result}, Page: {page_num}, Rank: {total_ranks[page_num]}")
             matches = results.get(page_num, [])  # Ensure to get matches or an empty list if no matches
@@ -285,6 +295,18 @@ def get_all_words(text):
     return words
 
 
+def save_pdf_pages(page_numbers):
+    input_pdf = PdfReader(PDF_PATH)
+    output_pdf = PdfWriter()
+
+    for page_num in page_numbers:
+        output_pdf.add_page(input_pdf.pages[page_num - 1])
+
+    with open(RESULT_PDF_PATH, 'wb') as output_pdf_file:
+        output_pdf.write(output_pdf_file)
+    print(f"Search results saved to {RESULT_PDF_PATH}")
+
+
 def search_menu():
     if os.path.exists(SERIALIZED_GRAPH_PATH) and os.path.exists(SERIALIZED_TRIE_PATH) and os.path.exists(
             SERIALIZED_TEXT_PATH):
@@ -306,8 +328,11 @@ def search_menu():
         if query.lower() == 'exit':
             break
 
-        # Autocomplete logic
-        if query.endswith('*'):
+        # Check for logical operators in the query
+        has_logical_operators = any(op in query.lower() for op in ['and', 'or', 'not'])
+
+        # Autocomplete logic (only if no logical operators are present)
+        if not has_logical_operators and query.endswith('*'):
             autocomplete_options = trie.autocomplete(query.rstrip('*'))
             if autocomplete_options:
                 print("Autocomplete options:")
@@ -320,7 +345,7 @@ def search_menu():
         parsed_query = parse_query(query)
         results, keyword_count, page_order = search_keywords(text, parsed_query, G, trie)
 
-        if not results:  # If no results, suggest similar words
+        if not results and not has_logical_operators:  # If no results and no logical operators, suggest similar words
             similar_words = []
             for token in parsed_query:
                 if isinstance(token, list):
