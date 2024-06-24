@@ -4,6 +4,7 @@ import networkx as nx
 from collections import defaultdict
 import re
 import os
+from difflib import get_close_matches
 
 PDF_PATH = "C:/Users/milan/OneDrive/Desktop/SIIT/2. Semestar/Algoritmi i Strukture/Projekat 2/Data Structures and Algorithms in Python.pdf"
 OFFSET = 22  # Offset za prve 22 nenumerisane stranice
@@ -266,6 +267,24 @@ def display_results(results, keyword_count, page_order, G, parsed_query, text, r
                 break
 
 
+def find_similar_words(word, word_list, n=1, cutoff=0.8):
+    """
+    Find similar words from the word list using difflib.
+    """
+    return get_close_matches(word, word_list, n=n, cutoff=cutoff)
+
+
+def get_all_words(text):
+    """
+    Extract all unique words from the text for similarity comparison.
+    """
+    words = set()
+    for page in text:
+        page_words = re.findall(r'\w+', page)
+        words.update(page_words)
+    return words
+
+
 def search_menu():
     if os.path.exists(SERIALIZED_GRAPH_PATH) and os.path.exists(SERIALIZED_TRIE_PATH) and os.path.exists(
             SERIALIZED_TEXT_PATH):
@@ -280,24 +299,50 @@ def search_menu():
         save_object(trie, SERIALIZED_TRIE_PATH)
         save_object(text, SERIALIZED_TEXT_PATH)
 
+    all_words = get_all_words(text)
+
     while True:
         query = input("Enter search query (or 'exit' to quit): ")
         if query.lower() == 'exit':
             break
 
         # Autocomplete logic
-        autocomplete_options = trie.autocomplete(query)
-        if autocomplete_options:
-            print("Autocomplete options:")
-            for option in autocomplete_options:
-                print(option)
-            autocomplete_choice = input("Choose an option or continue typing your query: ")
-            if autocomplete_choice:
-                query = autocomplete_choice
+        if query.endswith('*'):
+            autocomplete_options = trie.autocomplete(query.rstrip('*'))
+            if autocomplete_options:
+                print("Autocomplete options:")
+                for option in autocomplete_options:
+                    print(option)
+                autocomplete_choice = input("Choose an option or continue typing your query: ")
+                if autocomplete_choice:
+                    query = autocomplete_choice
 
         parsed_query = parse_query(query)
         results, keyword_count, page_order = search_keywords(text, parsed_query, G, trie)
-        display_results(results, keyword_count, page_order, G, parsed_query, text)
+
+        if not results:  # If no results, suggest similar words
+            similar_words = []
+            for token in parsed_query:
+                if isinstance(token, list):
+                    for word in token:
+                        similar_word = find_similar_words(word, all_words)
+                        if similar_word:
+                            similar_words.extend(similar_word)
+
+            if similar_words:
+                print("Did you mean:")
+                for suggestion in similar_words:
+                    print(suggestion)
+                continue_choice = input("Would you like to search for one of these suggestions? (yes/no): ")
+                if continue_choice.lower() == 'yes':
+                    new_query = input("Enter the new search query: ")
+                    parsed_query = parse_query(new_query)
+                    results, keyword_count, page_order = search_keywords(text, parsed_query, G, trie)
+
+        if results:
+            display_results(results, keyword_count, page_order, G, parsed_query, text)
+        else:
+            print("No results found.")
 
 
 if __name__ == "__main__":
