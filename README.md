@@ -2,7 +2,7 @@
 
 🔍 **PDF Search Engine** is a Python-based search engine that processes a single PDF document, builds optimized data structures, and enables efficient keyword-based search. Users can enter textual queries, and the system ranks and displays relevant search results.  
 
-The project uses **Data Structures and Algorithms in Python** as a test document.  
+📖 The project uses the **book** _Data Structures and Algorithms in Python_ as a test document for search queries. This ensures that the search engine is tested on real-world technical content.  
 
 ---
 
