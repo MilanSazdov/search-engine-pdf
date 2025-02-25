@@ -47,7 +47,7 @@ pip install pdfminer.six PyPDF2 networkx
   - [🔎 Logical Search](#-logical-search)  
   - [🔎 Autocomplete](#-autocomplete)
 - [📂 Search Results & Pagination](#-search-results--pagination)
-- [⚠️ Potential Issues and Troubleshooting](#-potential-issues-and-troubleshooting)   
+- [⚠️ Potential Issues and Troubleshooting](#potential-issues)   
 - [📜 License](#-license)  
 - [📬 Contact](#-contact) 
 
@@ -205,6 +205,8 @@ Below is an example of the autocomplete feature in action:
   - **`done`** → Exit the search.
 
 ---
+
+<a name="potential-issues"></a>
 
 ## ⚠️ Potential Issues and Troubleshooting  
 
