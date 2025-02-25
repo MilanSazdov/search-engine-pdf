@@ -103,6 +103,14 @@ See the LICENSE file for more details.
 
 ---
 
+## 🔗 Useful Links  
+
+- 📖 [README](README.md)  
+- ❤️ [Code of Conduct](CODE_OF_CONDUCT.md)  
+- 📜 [MIT License](LICENSE)  
+
+---
+
 ## 📬 Contact  
 📧 **Email:** [milansazdov@gmail.com](mailto:milansazdov@gmail.com)  
 🐙 **GitHub:** [MilanSazdov](https://github.com/MilanSazdov)  
