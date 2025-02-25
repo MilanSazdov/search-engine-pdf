@@ -97,6 +97,26 @@ python NOT dictionary
 
 ---
 
+## ⚠️ Potential Issues & Troubleshooting  
+
+| Issue | Solution |
+|-------|----------|
+| `ModuleNotFoundError: No module named 'pdfminer'` | Run `pip install pdfminer.six` to install the missing library. |
+| `ModuleNotFoundError: No module named 'PyPDF2'` | Run `pip install PyPDF2` to install the missing library. |
+| `ModuleNotFoundError: No module named 'networkx'` | Run `pip install networkx` to install the missing library. |
+| `PDF file not found` | **Make sure to update the path to your PDF file in the script before running the program.** |
+| `Slow search performance` | Try running with pre-indexed data using `pickle` serialization. |
+| `UnicodeDecodeError` when processing PDF | Ensure the PDF file is properly encoded and not corrupted. |
+| `Graph ranking does not work as expected` | Verify that the script correctly extracts page references (e.g., "See page X"). |
+
+**🔹 Required Dependencies:**  
+Before running the script, make sure you have installed all required dependencies:  
+```sh
+pip install pdfminer.six PyPDF2 networkx difflib
+```  
+
+---
+
 ## 📜 License  
 This project is licensed under the [MIT License](LICENSE).  
 See the LICENSE file for more details.  
