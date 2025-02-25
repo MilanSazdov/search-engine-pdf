@@ -185,6 +185,7 @@ fundamental
 ```
 
 Below is an example of the autocomplete feature in action:
+
 ![Autocomplete](assets/autocomplete.png)
 
 ---
