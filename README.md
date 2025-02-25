@@ -64,3 +64,34 @@ pip install pdfminer.six PyPDF2 networkx
    - The top results are shown with **page numbers and contextual snippets** where the word appears.  
    - **Pagination** allows users to navigate through results.  
    - Users can save results as a **PDF with highlighted keywords**.  
+
+---
+
+## 🔧 Installation & Usage
+
+### **1️⃣ Clone the Repository**
+```sh
+git clone https://github.com/your-username/pdf-search-engine.git
+cd pdf-search-engine
+```
+
+### **2️⃣ Install Dependencies Manually**  
+Run the following command to install required Python libraries:  
+```sh
+pip install pdfminer.six PyPDF2 networkx
+```
+
+### **3️⃣ Run the Search Engine**  
+To start the search engine, run the following command:  
+```sh
+python main.py
+```
+
+### **4️⃣ Enter Your Search Query**  
+Example queries:  
+```sh
+data structures
+algorithm OR graph
+python NOT dictionary
+```
+
