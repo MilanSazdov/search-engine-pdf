@@ -47,7 +47,7 @@ pip install pdfminer.six PyPDF2 networkx
   - [🔎 Logical Search](#-logical-search)  
   - [🔎 Autocomplete](#-autocomplete)
 - [📂 Search Results & Pagination](#-search-results--pagination)
-- [⚠️ Potential Issues & Troubleshooting](#-potential-issues--troubleshooting)  
+- [⚠️ Potential Issues and Troubleshooting](#-potential-issues-and-troubleshooting)   
 - [📜 License](#-license)  
 - [📬 Contact](#-contact) 
 
