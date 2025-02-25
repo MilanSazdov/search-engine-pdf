@@ -41,7 +41,8 @@ pip install pdfminer.six PyPDF2 networkx
 - [🛠 Technologies & Dependencies](#-technologies--dependencies)  
 - [📖 How It Works](#-how-it-works)  
 - [🔧 Installation & Usage](#-installation--usage)  
-- [📌 Example Search Result](#-example-search-result)  
+- [📌 Example Search Result](#-example-search-result)
+- [📂 Search Results & Pagination](#-search-results--pagination)
 - [⚠️ Potential Issues & Troubleshooting](#-potential-issues--troubleshooting)  
 - [📜 License](#-license)  
 - [📬 Contact](#-contact) 
@@ -187,6 +188,16 @@ fundamental
 Below is an example of the autocomplete feature in action:
 
 ![Autocomplete](assets/autocomplete.png)
+
+---
+
+## 📂 **Search Results & Pagination**  
+- The program ranks and displays **the top 20 search results** based on relevance.  
+- Search results are **automatically saved as a PDF file**, named according to the query (e.g., `search_results_python_20250225_230419.pdf`).  
+- After viewing 20 results, the user is prompted with three options:  
+  - **`next`** → View the next 20 results.  
+  - **`all`** → Display all remaining results at once.  
+  - **`done`** → Exit the search. 
 
 ---
 
