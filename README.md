@@ -95,3 +95,16 @@ algorithm OR graph
 python NOT dictionary
 ```
 
+---
+
+## 📜 License  
+This project is licensed under the [MIT License](LICENSE).  
+See the LICENSE file for more details.  
+
+---
+
+## 📬 Contact  
+📧 **Email:** [milansazdov@gmail.com](mailto:milansazdov@gmail.com)  
+🐙 **GitHub:** [MilanSazdov](https://github.com/MilanSazdov)  
+
+---
