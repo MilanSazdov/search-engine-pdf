@@ -94,6 +94,98 @@ data structures
 algorithm OR graph
 python NOT dictionary
 ```
+---
+## 📌 Example Search Result  
+
+When you start the **PDF Search Engine**, the following menu appears, guiding you through different search options:  
+
+### 🛠 **Available Search Options:**  
+- **Basic search:** Type a single word or multiple words separated by spaces to search for occurrences in the document.  
+- **Exit:** Type `exit` in the search query to close the program.  
+- **Phrase search:** Use double quotes (`"word1 word2 word3"`) to search for an exact phrase in the document.  
+- **Logical search:** Use `NOT`, `OR`, and `AND` to perform advanced queries (e.g., `python AND algorithm NOT dictionary`).  
+- **Autocomplete:** Add `*` at the end of a word to get suggestions (e.g., `fun*` → `function, functionality`).  
+
+Below is an example of how the search menu looks when you start the application:  
+
+![Search Menu](assets/search_menu.png)  
+
+---
+
+### 🔍 **Base Search**  
+After entering a search query, the system scans the document and displays ranked results.  
+
+#### **How ranking works:**  
+- **Keyword appearances**: More occurrences = higher rank.  
+- **Distinct keywords bonus**: More unique keywords = better ranking.  
+- **Page references (links bonus)**: If another page references the current one, it increases rank.  
+- **Referring keywords bonus**: If a keyword appears on multiple linked pages, it adds extra points.  
+
+Below is an example of a basic search query:  
+
+![Base Search](assets/base_search.png)  
+
+---
+
+### 🔎 **Phrase Search**  
+Phrase search allows users to look for an exact sequence of words by enclosing them in double quotes (`"`).  
+
+#### **Example:**  
+If you search for:  
+```sh
+"data structures"
+```
+
+The system will only return results where `"data structures"` appears exactly as written, rather than separate occurrences of `"data"` and `"structures"` on the same page. This ensures that the search retrieves only results where the words appear together in the correct order.  
+
+Below is an example of phrase search results:  
+
+![Phrase Search](assets/phrase_search.png)  
+
+### 🔎 **Logical Search**  
+Logical search allows users to refine their queries using logical operators:  
+
+- **`AND`** – Returns results that contain **both** words.  
+- **`OR`** – Returns results that contain **at least one** of the words.  
+- **`NOT`** – Excludes pages containing the specified word.  
+
+#### **Example Query:**  
+```sh
+python AND algorithm NOT dictionary
+```
+- This query will return results that **contain both** `"python"` and `"algorithm"`, but **exclude** any pages that mention `"dictionary"`.  
+
+Below is an example of a logical search result:  
+
+![Logical Search](assets/logical_search.png)  
+
+### 🔎 **Autocomplete**  
+The search engine provides **autocomplete suggestions** when a user types a word followed by `*`. This helps in quickly finding relevant terms without typing the full word.  
+
+#### **How It Works:**  
+- Type the beginning of a word followed by `*` (e.g., `fun*`).  
+- The system will display **a list of possible completions**.  
+- You can select an option or continue typing your query.  
+
+#### **Example Query:**  
+```sh
+fun*
+```
+The system suggests words like:
+```sh
+fun
+func
+function
+functional
+functionality
+functions
+fund
+funda
+fundamental
+```
+
+Below is an example of the autocomplete feature in action:
+![Autocomplete](assets/autocomplete.png)
 
 ---
 
