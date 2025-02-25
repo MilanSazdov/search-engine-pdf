@@ -19,7 +19,13 @@ The project uses **Data Structures and Algorithms in Python** as a test document
 
 ---
 
-## 🛠 Technologies & Dependencies
+## 🛠 Technologies & Dependencies  
+
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue?logo=python) 
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20MacOS-lightgrey) 
+![License](https://img.shields.io/badge/License-MIT-green) 
+![Contributions](https://img.shields.io/badge/Contributions-Welcome-brightgreen)  
+
 | Library       | Purpose |
 |--------------|---------|
 | `pdfminer.six`  | Extract text from PDF files |
@@ -30,9 +36,10 @@ The project uses **Data Structures and Algorithms in Python** as a test document
 | `re`            | Process regular expressions for query parsing |
 | `pickle`        | Serialize and load pre-indexed search structures |
 
-Install dependencies using:
+### 📥 Install dependencies  
 ```sh
 pip install pdfminer.six PyPDF2 networkx
+
 ```
 ---
 
