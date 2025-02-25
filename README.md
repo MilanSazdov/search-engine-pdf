@@ -229,7 +229,7 @@ pip install pdfminer.six PyPDF2 networkx difflib
 ---
 
 ## 📜 License  
-This project is licensed under the [MIT License](LICENSE).  
+This project is licensed under the [MIT License](LICENSE.md).  
 See the LICENSE file for more details.  
 
 ---
@@ -238,7 +238,7 @@ See the LICENSE file for more details.
 
 - 📖 [README](README.md)  
 - ❤️ [Code of Conduct](CODE_OF_CONDUCT.md)  
-- 📜 [MIT License](LICENSE)  
+- 📜 [MIT License](LICENSE.md)  
 
 ---
 
