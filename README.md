@@ -206,7 +206,7 @@ Below is an example of the autocomplete feature in action:
 
 ---
 
-## ⚠️ Potential Issues & Troubleshooting  
+## ⚠️ Potential Issues and Troubleshooting  
 
 | Issue | Solution |
 |-------|----------|
